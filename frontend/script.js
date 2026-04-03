@@ -1,282 +1,86 @@
-/*
-Файл: frontend/script.js
-Назначение: Основной JavaScript файл для фронтенда приложения учета товаров
-JavaScript - язык программирования, который выполняется в браузере пользователя
-Функционал: Проверка соединения с API, обновление статуса на странице
-*/
-
-// Строгий режим (strict mode) для JavaScript
-// Включает дополнительные проверки и предотвращает распространенные ошибки
-// Например, запрещает использование необъявленных переменных
 'use strict';
+const API_BASE_URL = 'http://localhost:5000';
+const API_CHECK_INTERVAL = 5000;
+let apiCheckTimer = null;
+async function checkApiStatus() {
+    const statusElement = document.getElementById('api-status');
+    const spinnerElement = document.getElementById('loading-spinner');
+    try {
+        const response = await fetch(`${API_BASE_URL}/`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            statusElement.textContent = `API работает (версия ${data.version})`;
+            spinnerElement.style.display = 'none';
+            console.log('API сервер доступен');
+        } else {
+            throw new Error(`Ошибка сервера: ${response.status}`);
+        }
+    } catch (error) {
+        if (error.message.includes('Failed to fetch')) {
+            statusElement.textContent = 'API сервер недоступен';
+            console.log('API сервер недоступен. Запустите backend/app.py');
+        }
 
-// ====================================================
-// КОНСТАНТЫ И ПЕРЕМЕННЫЕ
-// Блок объявления данных, которые будут использоваться в программе
-// ====================================================
+        else if (error.message.includes('Ошибка сервера')) {
+            statusElement.textContent = 'Проблема с API сервером';
+            console.log('Неизвестная ошибка:', error.message);
+        }
 
-// Константа (неизменяемое значение) - базовый URL адрес API сервера
-const api_base_url = 'http://localhost:5000';
-
-// Константа - интервал времени между проверками API в миллисекундах
-const api_check_interval = 1000; // секунд
-
-// Переменная для хранения идентификатора таймера
-let api_check_timer = null;
-
-// let apiCheckTimer = null;
-// let apiCheckTimer = null;
-
-// ============================================
-// ОСНОВНАЯ ФУНКЦИЯ ПРОВЕРКИ API
-// Функция - это блок кода, который выполняет определенную задачу
-// ============================================
-
-/**
- * Проверяет доступность API сервера
- * Обновляет статус на странице в зависимости от результата
- *
- * async function - асинхронная функция
- * Асинхронный код позволяет выполнять операции, которые занимают время
- * (например, запрос к серверу), не блокируя выполнение остального кода
- */
-
-async function checkApiStatus() : Promise<void> { Show usages
-// Получаем элементы DOM (Document Object Model) для отображения статуса
-// DOM - это представление HTML документа в виде дерева объектов
-// document - это объект, представляющий всю HTML страницу
-// getElementById() - метод, который ищет элемент по его ID
-// ID - уникальный идентификатор элемента в HTML
-
-const statusElement : HTMLElement = document.getElementById( elementId: 'api-status' );
-const spinnerElement : HTMLElement = document.getElementById( elementId: 'loading-spinner' );
-
-// Блок try...catch - конструкция для обработки ошибок
-// try - пытаемся выполнить код внутри этого блока
-// catch - если в try произошла ошибка, выполняем код в catch
-try {
-    // Отправляем GET запрос к корневому эндпоинту API
-    // fetch() - встроенная функция для выполнения HTTP запросов
-    // await - ждет, пока запрос завершится, прежде чем продолжать выполнение
-    // ${API_BASE_URL} - шаблонная строка, подставляет значение переменной
-
-    const response : Response = await fetch( input: `${API_BASE_URL}` , init: {
-    method: 'GET', // HTTP метод GET (получение данных)
-    headers: { // Заголовки запроса
-    'Accept': 'application/json' // Ожидаем получить данные в формате JSON
+        spinnerElement.style.display = 'inline-block';
     }
-    });
-
-    // Проверяем, успешен ли ответ
-    // response.ok - свойство, которое равно true, если HTTP статус 200-299
-
-if (response.ok) {
-    // Парсим (разбираем) JSON данные из ответа
-    // JSON (JavaScript Object Notation) - текстовый формат данных
-    // await response.json() - преобразует текст ответа в JavaScript объект
-
-    const data = await response.json();
-
-    // Обновляем текст элемента статуса на странице
-    // textContent - свойство для установки текстового содержимого элемента
-
-    statusElement.textContent = `API работает (версия ${data.version})`;
-
-    // Скрываем спиннер загрузки (анимация вращения)
-    // style.display - CSS свойство для управления отображением элемента
-    // 'none' - скрыть элемент
-
-    spinnerElement.style.display = 'none';
-
-    // Выводим сообщение в консоль браузера
-    // console.log() - функция для вывода информации в консоль разработчика
-    // Консоль можно открыть в браузере нажатием F12
-
-    console.log('API сервер доступен');
-
-} else {
-    // Если ответ не успешен, создаем ошибку
-    // throw - оператор для создания (выбрасывания) ошибки
-    // new Error() - создает новый объект ошибки с сообщением
-
-    throw new Error(`Ошибка сервера: ${response.status}`);
 }
 
-catch (error) {
-    // Этот блок выполняется, если в блоке try произошла ошибка
-    // error - объект ошибки, содержащий информацию о том, что пошло не так
-
-    // Проверяем, содержит ли сообщение об ошибке текст "Failed to fetch"
-    // includes() - метод строки, проверяющий наличие подстроки
-
-    if (error.message.includes('Failed to fetch')) {
-    // Ошибки сети (сервер не запущен или недоступен)
-    statusElement.textContent = 'API сервер недоступен';
-    console.log('API сервер недоступен. Запустите backend/app.py');
-    }
-
-    // Проверяем, содержит ли сообщение об ошибке текст "Ошибка сервера"
-    else if (error.message.includes('Ошибка сервера')) {
-    // HTTP ошибки (сервер запущен, но ответил с ошибкой)
-    statusElement.textContent = 'Проблема с API сервером';
-    console.log('API сервер ответил с ошибкой');
-    } else {
-    // Другие, непредвиденные ошибки
-    statusElement.textContent = 'Ошибка соединения';
-    console.log('Неизвестная ошибка:', error.message);
-    }
-
-    // Показываем спиннер загрузки при ошибке
-    spinnerElement.style.display = 'inline-block';
-}
-
-// ==============+=======================
-// ФУНКЦИИ УПРАВЛЕНИЯ ПРОВЕРКОЙ
-// Эти функции управляют периодическим выполнением проверки API
-// ============================================
-
-/**
- * Запускает периодическую проверку API
- * Функция без параметров и возвращаемого значения
- */
-function startApiMonitoring() : void {
-    // Вызываем функцию проверки API сразу при запуске
-    // Имя функции с круглыми скобками - вызов функции
-
+function startApiMonitoring() {
     checkApiStatus();
-
-    // Устанавливаем периодический вызов функции
-    setInterval() - встроенная функция, которая вызывает другую функцию
-    повторно через указанный интервал времени
-    Первый параметр - функция для вызова (checkApiStatus)
-    Второй параметр - интервал в миллисекундах (API_CHECK_INTERVAL)
-    Возвращает идентификатор таймера, который сохраняем в переменную
-
-    apiCheckTimer = setTimeout(checkApiStatus, API_CHECK_INTERVAL);
-
+    apiCheckTimer = setInterval(checkApiStatus, API_CHECK_INTERVAL);
     console.log('Мониторинг API запущен');
 }
 
-/**
- * Останавливает периодическую проверку API
- */
-function stopApiMonitoring() :void { Show usages
-    // Проверяем, существует ли таймер (не равен null)
-    // if - условный оператор, выполняет код в блоке, если условие истинно
-
+function stopApiMonitoring() {
     if (apiCheckTimer) {
-    // Останавливаем таймер
-    // clearInterval() - функция для остановки интервала
-    // Принимает идентификатор таймера, который нужно остановить
-
-    clearInterval(apiCheckTimer);
-
-    // Сбрасываем переменную таймера в null
-    apiCheckTimer = null;
-
-    console.log('Мониторинг API остановлен');
+        clearInterval(apiCheckTimer);
+        apiCheckTimer = null;
+        console.log('Мониторинг API остановлен');
+    }
 }
 
-// ============================================
-// ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
-// Функции, которые запускаются при загрузке страницы
-// ============================================
-
-/**
- * Инициализирует приложение при загрузке страницы
- * Основная точка входа приложения
- */
-
-function initApp() : void { Show usages
+function initApp() {
     console.log('Приложение инициализируется...');
-
-    // Запускаем проверку API и периодический мониторинг
     startApiMonitoring();
-
-    // Настраиваем обработчики событий
-    // Функции настройки обработчиков событий
     setupEventListeners();
-
     console.log('Приложение готово к работе');
 }
 
-/**
- * Настраивает обработчики событий на странице
- * Событие (event) - действие пользователя или браузера
- * (клик, загрузка страницы, изменение размера окна и т.д.)
- */
-function setupEventListeners() : void { Show usages
-
-    // Добавляем обработчик события beforeunload
-    // beforeunload - событие, которое происходит перед закрытием или перезагрузкой страницы
-    // window - объект, представляющий окно браузера
-    // addEventListener() - метод для привязки функции к событию
-    // Первый параметр - тип события ('beforeunload')
-    // Второй параметр - функция, которая выполняется при событии (stopApiMonitoring)
-
-    window.addEventListener( type: 'beforeunload', stopApiMonitoring);
-
-    // Событие online - когда браузер восстанавливает соединение с интернетом
-    window.addEventListener( type: 'online', checkApiStatus);
-
-    // Событие offline - когда браузер теряет соединение с интернетом
-    // Используем анонимную функцию (без имени) в качестве обработчика
-    window.addEventListener( type: 'offline', listener: function() : void {
-    // Получаем элемент статуса
-    const statusElement : HTMLElement = document.getElementById( elementId: 'api-status');
-
-    // Проверяем, существует ли элемент
-    // Если элемент найден на странице
-    if (statusElement) {
-    // Обновляем текст статуса
-    statusElement.textContent = 'Нет интернет-соединения';
-    }
+function setupEventListeners() {
+    window.addEventListener('beforeunload', stopApiMonitoring);
+    window.addEventListener('online', checkApiStatus);
+    window.addEventListener('offline', function () {
+        const statusElement = document.getElementById('api-status');
+        if (statusElement) {
+            statusElement.textContent = 'Нет интернет соединения';
+        }
     });
-
 }
 
-// ===========================================================================
-// ЗАПУСК ПРИЛОЖЕНИЯ
-// Код, который выполняется при загрузке страницы
-// ===========================================================================
-// Добавляем обработчик события DOMContentLoaded
-// DOMContentLoaded - событие, которое происходит когда HTML документ
-// полностью загружен и преобразован в DOM дерево
-// (но стили, изображения и другие ресурсы могут еще загружаться)
+document.addEventListener('DOMContentLoaded', initApp);
 
-document.addEventListener('type': 'DOMContentLoaded', initApp);
-
-// ===========================================================================
-// ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ (для отладки)
-// Отладка (debugging) - процесс поиска и исправления ошибок в коде
-// ===========================================================================
-
-/**
- * Форматирует дату для отображения в удобном виде
- * @param {Date} date - объект даты JavaScript
- * @returns {string} Отформатированная строка с датой и временем
- *
- * Комментарий в формате JSON (JavaScript Documentation)
- * Помогает понять, что делает функция и какие параметры принимает
- */
-
-function formatDate(date : Date ) : string {
-    // Преобразуем дату в строку по правилам русского языка
-    // toLocaleString() - метод объекта Date для локализации даты
-    // 'ru-RU' - локаль (язык и регион) для форматирования
-
-    return date.toLocaleString( locales: 'ru-RU' );
+function formatDate(date) {
+    return date.toLocaleString('ru-RU');
 }
 
 window.appDebug = {
-    checkApiStatus: checkApiStatus, // Функция проверки API
-    stopApiMonitoring: stopApiMonitoring, // Функция остановки мониторинга
-    formatDate: formatDate // Функция форматирования даты
+    checkApiStatus: checkApiStatus,
+    stopApiMonitoring: stopApiMonitoring,
+    formatDate: formatDate,
 };
 
-// Выводим инструкцию в консоль при загрузке страницы
 console.log('Для отладки используйте window.appDebug в консоли браузера (F12)');
 console.log('Доступные команды:');
-console.log('  window.appDebug.checkApiStatus() - проверить API');
-console.log('  window.appDebug.stopApiMonitoring() - остановить проверку');
-console.log('  window.appDebug.formatDate(new Date()) - форматировать дату');
+console.log(' window.appDebug.checkApiStatus() - проверить API');
+console.log(' window.appDebug.stopApiMonitoring() - остановить проверку');
+console.log(' window.appDebug.formatDate(new Date()) - форматировать дату');
